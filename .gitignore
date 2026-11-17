@@ -1,0 +1,15 @@
+# Secrets: never commit these
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+
+# OS and editor
+.DS_Store
+.vscode/
