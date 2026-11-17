@@ -1,48 +1,108 @@
+from . import config, handoff
 from .branches import product_info, refund_status, troubleshooting
-from .intent import classify_intent
+from .intent import classify
 from .observability import trace_step
 from .session import Session
 from .tools import orders
 from .types import Intent, Reply
 
-BRANCHES = {
-    Intent.PRODUCT_INFO: product_info.answer,
-    Intent.TROUBLESHOOTING: troubleshooting.answer,
-    Intent.REFUND_STATUS: refund_status.answer,
-}
+FILLER_WORDS = {"my", "order", "id", "is", "the", "it", "its", "it's", "about", "for", "hi", "hello", "hey",
+                "number", "item", "one", "this", "a", "an", "please", "thanks", "and", "or", "maybe",
+                "actually", "s", "regarding", "re", "question", "help", "with", "i", "have", "need", "on"}
 
 
 def handle_message(session: Session, message: str) -> Reply:
-    """One customer message in, one reply out. The intent gate runs on EVERY message."""
+    """One customer message in, one reply out. The intent gate runs on EVERY message.
+
+    A reply with needs_review=True is a draft: show it to a person first, then call send_reviewed().
+    """
     session.history.append({"role": "user", "content": message})
+    session.turns += 1
     reply = _route(session, message)
-    session.history.append({"role": "assistant", "content": reply.text})
+    if not reply.needs_review:
+        session.history.append({"role": "assistant", "content": reply.text})
     return reply
+
+
+def send_reviewed(session: Session, draft: Reply, approved_text: str) -> Reply:
+    """Human checkpoint: the reviewer approved or edited a draft, so it can go to the customer."""
+    session.history.append({"role": "assistant", "content": approved_text})
+    return Reply(approved_text, intent=draft.intent)
 
 
 def _route(session: Session, message: str) -> Reply:
-    # Pre-check: once per session, until an order and an item are selected.
-    if session.order_id is None:
-        with trace_step("order_precheck"):
-            order_id = orders.find_order_id(message)
-        if order_id is None:
-            return Reply("Please share your order ID so I can look up your purchase.")
-        session.order_id = order_id
+    if session.handed_off:
+        return Reply("A member of our team has your conversation and will reply here shortly.", needs_human=True)
+    if session.turns > config.MAX_TURNS:
+        return handoff.to_human(session, "step limit reached")
 
-    if session.item_id is None:
-        order = orders.get_order(session.order_id)
-        item = orders.select_item(order, message)
-        if item is None:
-            names = ", ".join(i["name"] for i in order["items"])
-            return Reply(f"I found your order. Which item is this about? ({names})")
-        session.item_id, session.product_id = item["item_id"], item["product_id"]
-        return Reply(f"Thanks, I found your {item['name']}. How can I help?")
+    if not orders.WORD_RE.search(message.lower()):  # "...", "?": nothing to classify
+        return Reply("How can I help? You can ask about your product, a problem with it, or a refund.")
 
+    # Intent gate first, so "I need a person" works even before an order ID is given.
     with trace_step("intent_gate"):
-        intent = classify_intent(session, message)
-    if intent == Intent.ESCALATE:
-        return Reply("Connecting you to a human agent.", intent=intent, needs_human=True)
-    with trace_step(intent.value):
-        reply = BRANCHES[intent](session, message)
-    reply.intent = intent
+        result = classify(session, message)
+    if result.intent == Intent.ESCALATE:
+        return handoff.to_human(session, "customer asked for a person")
+    if result.unhappy:
+        return handoff.to_human(session, "customer is unhappy",
+                                "I'm sorry this has been frustrating. I'm connecting you to a member of our support team.")
+
+    # Pre-check (code): an order this customer owns. A new order ID in a later message switches orders.
+    with trace_step("order_precheck"):
+        order_id = orders.find_order_id(message, session.customer_id)
+    just_found_order = bool(order_id and order_id != session.order_id)
+    if just_found_order:
+        session.order_id, session.item_id, session.product_id, session.item_name = order_id, None, None, None
+    if session.order_id is None:
+        # same reply for "doesn't exist" and "someone else's order", so other customers' orders stay hidden
+        if orders.ORDER_ID_RE.search(message):
+            return Reply("I couldn't find that order on your account. Please check the order ID "
+                         "in your confirmation email.")
+        return Reply("Please share your order ID so I can look up your purchase.")
+
+    # Item selection: every message, so "actually my soundbar..." switches item.
+    order = orders.get_order(session.order_id, session.customer_id)
+    item = orders.select_item(order, message)
+    just_selected = item is not None and item["item_id"] != session.item_id
+    if just_selected:
+        session.item_id, session.product_id, session.item_name = item["item_id"], item["product_id"], item["name"]
+        session.steps_tried.clear()
+    if session.item_id is None:
+        names = ", ".join(f"{n}. {i['name']}" for n, i in enumerate(order["items"], 1))
+        if just_found_order:
+            return Reply(f"I found your order. Which item is this about? ({names})")
+        return Reply(f"Sorry, I didn't catch which item. Please reply with the number or the name: {names}")
+    if just_selected and _only_identifiers(message, order):
+        return Reply(f"Thanks, I found your {session.item_name}. How can I help?")
+
+    if result.intent == Intent.OUT_OF_SCOPE:
+        return Reply("I can help with product questions, troubleshooting and refund status for your order. "
+                     "For anything else, I can connect you with our team.", intent=result.intent)
+    if result.confidence < config.MIN_CONFIDENCE:
+        session.unclear_turns += 1
+        if session.unclear_turns >= config.MAX_UNCLEAR_TURNS:
+            return handoff.to_human(session, "intent unclear after a clarifying question")
+        return Reply(f"Just to check: is this a question about your {session.item_name}, a problem with it, "
+                     "or about a refund?")
+    session.unclear_turns = 0
+
+    if result.intent.value not in session.topics_covered and result.intent != Intent.PRODUCT_INFO:
+        session.topics_covered.append(result.intent.value)
+    with trace_step(result.intent.value):
+        if result.intent == Intent.TROUBLESHOOTING:
+            reply = troubleshooting.answer(session, message, result.step_result)
+        elif result.intent == Intent.REFUND_STATUS:
+            reply = refund_status.answer(session, message)
+        else:
+            reply = product_info.answer(session, message)
+    session.last_intent = result.intent.value
+    reply.intent = reply.intent or result.intent
     return reply
+
+
+def _only_identifiers(message: str, order: dict) -> bool:
+    """True for "A1001", "the TV", "2": the message picked an order or item but asked nothing."""
+    words = orders.WORD_RE.findall(message.lower())
+    return all(w in FILLER_WORDS or w in orders.item_words(order) or w.isdigit()
+               or orders.ORDER_ID_RE.fullmatch(w) for w in words)

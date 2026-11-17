@@ -2,6 +2,7 @@
   "orders": [
     {
       "order_id": "A1001",
+      "customer_id": "C100",
       "items": [
         {"item_id": "A1001-1", "product_id": "tv-55-oled", "name": "55-inch OLED TV", "keywords": ["tv", "television", "oled"], "order_date": "2026-06-15"},
         {"item_id": "A1001-2", "product_id": "soundbar-200", "name": "Soundbar 200", "keywords": ["soundbar", "speaker"], "order_date": "2025-09-01"}
@@ -9,8 +10,16 @@
     },
     {
       "order_id": "A1002",
+      "customer_id": "C100",
       "items": [
-        {"item_id": "A1002-1", "product_id": "headphones-x", "name": "Wireless Headphones X", "keywords": ["headphones"], "order_date": "2026-03-02"}
+        {"item_id": "A1002-1", "product_id": "headphones-x", "name": "Wireless Headphones X", "keywords": ["headphones", "headphone"], "order_date": "2026-03-02"}
+      ]
+    },
+    {
+      "order_id": "A1003",
+      "customer_id": "C200",
+      "items": [
+        {"item_id": "A1003-1", "product_id": "tv-55-oled", "name": "55-inch OLED TV", "keywords": ["tv", "television", "oled"], "order_date": "2026-10-01"}
       ]
     }
   ],

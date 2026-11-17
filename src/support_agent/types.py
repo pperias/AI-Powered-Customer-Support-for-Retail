@@ -11,6 +11,7 @@ class Intent(str, Enum):
     TROUBLESHOOTING = "troubleshooting"
     REFUND_STATUS = "refund_status"
     ESCALATE = "escalate"
+    OUT_OF_SCOPE = "out_of_scope"
 
 
 @dataclass
@@ -28,4 +29,6 @@ class Reply:
 
     text: str
     intent: Intent | None = None
-    needs_human: bool = False
+    needs_human: bool = False  # hand the conversation to a person (escalation or returns flow)
+    needs_review: bool = False  # a person must approve this draft before the customer sees it
+    handoff_summary: str | None = None  # context for the person taking over

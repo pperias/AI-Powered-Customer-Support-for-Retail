@@ -32,7 +32,10 @@ pip install -e ".[dev]"
 cp .env.example .env        # then add your own keys; never commit .env
 python -m pytest            # run the tests
 python -m support_agent.cli # try the chat in the terminal (RAG is a stub for now)
+pip install -e ".[ui]" && python -m support_agent.ui  # web chat at http://localhost:8000
 python evals/run_evals.py   # starter intent eval
 ```
 
-Try order `A1001` (two items) or `A1002` (one item, with a return in progress). Read `CONTRIBUTING.md` before your first pull request.
+The chat signs in as customer `C100` (change with `--customer`). Try order `A1001` (a TV in warranty and a soundbar out of warranty) or `A1002` (headphones with a return in progress). `A1003` belongs to another customer, so `C100` cannot see it. Refund status replies are drafts: the terminal asks you, as the reviewer, to approve or edit them before the customer sees them.
+
+With `OPENAI_API_KEY` set, the intent gate uses the LLM; without it (or with `SUPPORT_AGENT_OFFLINE=1`, which the tests set) it uses keyword matching. See `docs/demo-script.md` for conversations to try. Read `CONTRIBUTING.md` before your first pull request.

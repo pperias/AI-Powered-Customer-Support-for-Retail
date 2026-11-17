@@ -1,0 +1,18 @@
+{
+  "_comment": "Scripted troubleshooting for Version 1, asked one step at a time. Mock content only. The RAG owner can later supply these from the manuals.",
+  "tv-55-oled": [
+    "Unplug the TV from the wall for 60 seconds, then plug it straight into a wall outlet (not a power strip) and press the power button on the TV itself.",
+    "Check that the power cable is pushed fully into the back of the TV, and try a different wall outlet that you know works.",
+    "Look at the small standby light on the bottom edge of the TV. Is it off, red, or blinking? Hold the power button on the TV for 10 seconds."
+  ],
+  "soundbar-200": [
+    "Unplug the soundbar for 30 seconds, plug it back in, and press the power button on the soundbar.",
+    "Check that the input on the soundbar matches the cable you are using (HDMI ARC, optical or Bluetooth).",
+    "Reset the soundbar by holding the power and volume-down buttons together for 5 seconds."
+  ],
+  "default": [
+    "Turn the product off, unplug it or remove the battery for 30 seconds, then turn it on again.",
+    "Check every cable and the power source, and try a different outlet or charger.",
+    "Reset the product to factory settings using the button described in its quick-start guide."
+  ]
+}
