@@ -4,6 +4,7 @@ Run from the project root:
     python evals/run_evals.py                      # all conversations with the LLM, plus the LLM judge
     python evals/run_evals.py --offline            # keyword intent gate, no LLM calls (fast, free; for every PR)
     python evals/run_evals.py --calibrate-judge    # LLM judge vs human labels on data/troubleshooting_reference.csv
+    python evals/run_evals.py --calibrate-judge --online   # the Arize online judge vs data/online_judge_calibration.csv
     python evals/run_evals.py --case manager-claim # one case by name
 
 Each conversation runs through the real workflow (handle_message). With Arize keys set, every run is
@@ -29,12 +30,14 @@ from cases import CASES  # noqa: E402
 
 RESULTS_DIR = ROOT / "evals" / "results"
 REFERENCE_CSV = ROOT / "evals" / "data" / "troubleshooting_reference.csv"
+ONLINE_CSV = ROOT / "evals" / "data" / "online_judge_calibration.csv"
 GATING_CATEGORIES = {"safety", "access"}  # any failure here fails the run
 
 
 # --- Task: run one conversation through the agent ------------------------------------------------
 
 def run_conversation(case: dict) -> dict:
+    from support_agent.facts import item_facts
     from support_agent.session import Session
     from support_agent.workflow import handle_message, send_reviewed
 
@@ -53,20 +56,7 @@ def run_conversation(case: dict) -> dict:
             "item_id": session.item_id,
             "handoff": reply.handoff_summary or "",
         })
-    return {"session_id": session.session_id, "turns": turns, "facts": _facts(session)}
-
-
-def _facts(session) -> str:
-    """What the store's systems know about the selected item, so the judge can tell facts from inventions."""
-    from support_agent.tools import orders
-    from support_agent.tools.warranty import is_in_warranty
-
-    order = orders.get_order(session.order_id, session.customer_id) if session.order_id else None
-    item = next((i for i in order["items"] if i["item_id"] == session.item_id), None) if order else None
-    if item is None:
-        return ""
-    status = "in warranty" if is_in_warranty(item["order_date"]) else "out of warranty"
-    return f"Item: {item['name']}. Ordered {item['order_date']} ({status}, 12-month warranty)."
+    return {"session_id": session.session_id, "turns": turns, "facts": item_facts(session)}
 
 
 def check_turn(expect: dict, got: dict) -> list[str]:
@@ -179,22 +169,46 @@ def run_conversations(offline: bool, only: str | None, verbose: bool) -> bool:
     return not gating_failed
 
 
-def calibrate_judge() -> bool:
-    """Does the LLM judge agree with people? Trust it for decisions only if agreement is high."""
-    from judge import JUDGE_MODEL, Judge
+def calibrate_judge(online: bool) -> bool:
+    """Does the LLM judge agree with people? Rows without a human_label are skipped until someone labels them.
 
-    judge, rows, agree = Judge(), [], 0
-    with REFERENCE_CSV.open() as f:
-        for row in csv.DictReader(f):
+    online=False: the reference-based judge (offline evals). online=True: the rules-based judge used in Arize.
+    """
+    from judge import JUDGE_MODEL, Judge, OnlineJudge
+
+    with (ONLINE_CSV if online else REFERENCE_CSV).open() as f:
+        all_rows = list(csv.DictReader(f))
+    labeled = [r for r in all_rows if r["human_label"].strip()]
+    print(f"{len(labeled)} labeled rows, {len(all_rows) - len(labeled)} still need a human_label\n")
+    if not labeled:
+        return False
+
+    judge, rows = (OnlineJudge() if online else Judge()), []
+    for row in labeled:
+        human = row["human_label"].strip()
+        if online:
+            label, explanation = judge.grade(row["facts"], row["recent_conversation"], row["input"], row["output"]), ""
+        else:
             label, explanation = judge.grade(row["customer_message"], row["reference_response"], row["output"])
-            agree += label == row["human_label"]
-            rows.append({**row, "judge_label": label, "judge_explanation": explanation})
-            mark = "ok  " if label == row["human_label"] else "DIFF"
-            print(f"{mark} human={row['human_label']:7} judge={label:7} {row['output'][:60]!r}\n       {explanation}")
-    rate = agree / len(rows)
-    print(f"\nJudge ({JUDGE_MODEL}) agrees with human labels on {agree}/{len(rows)} ({rate:.0%})")
-    write_csv("judge-calibration", rows)
-    return rate >= 0.8
+        rows.append({**row, "judge_label": label, "judge_explanation": explanation})
+        mark = "ok  " if label == human else "DIFF"
+        print(f"{mark} human={human:7} judge={label:7} {row['output'][:60]!r}")
+        if label != human and explanation:
+            print(f"       judge: {explanation}")
+
+    labels = ("good", "partial", "bad")
+    agree = sum(r["judge_label"] == r["human_label"].strip() for r in rows)
+    print(f"\nAgreement: {agree}/{len(rows)} ({agree / len(rows):.0%})   judge model: {JUDGE_MODEL}")
+    print("\n                 judge: " + "".join(f"{l:>9}" for l in labels))
+    for human in labels:
+        counts = [sum(r["human_label"].strip() == human and r["judge_label"] == j for r in rows) for j in labels]
+        print(f"  human {human:9}       " + "".join(f"{c:>9}" for c in counts))
+    bad = [r for r in rows if r["human_label"].strip() == "bad"]
+    caught = sum(r["judge_label"] == "bad" for r in bad)
+    if bad:
+        print(f"\nBad answers caught: {caught}/{len(bad)}  (bad answers the judge let through are the most dangerous)")
+    write_csv("online-judge-calibration" if online else "judge-calibration", rows)
+    return agree / len(rows) >= 0.8 and caught == len(bad)
 
 
 def write_csv(stem: str, rows: list[dict]) -> None:
@@ -212,6 +226,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--offline", action="store_true", help="keyword intent gate, no LLM calls, no judge")
     parser.add_argument("--calibrate-judge", action="store_true", help="compare the judge with human labels")
+    parser.add_argument("--online", action="store_true", help="with --calibrate-judge: the Arize online judge")
     parser.add_argument("--case", help="run one conversation by name")
     parser.add_argument("--verbose", action="store_true", help="also print the full pydantic-evals report")
     args = parser.parse_args()
@@ -222,7 +237,7 @@ def main() -> None:
         from support_agent.observability import setup_tracing
 
         setup_tracing(os.getenv("ARIZE_EVALS_PROJECT", "retail-support-evals"))
-    ok = calibrate_judge() if args.calibrate_judge else run_conversations(args.offline, args.case, args.verbose)
+    ok = calibrate_judge(args.online) if args.calibrate_judge else run_conversations(args.offline, args.case, args.verbose)
     sys.exit(0 if ok else 1)
 
 

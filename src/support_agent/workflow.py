@@ -1,4 +1,5 @@
 from . import config, handoff
+from .facts import item_facts, recent_conversation
 from .branches import product_info, refund_status, troubleshooting
 from .intent import classify
 from .observability import conversation, set_attributes, trace_step
@@ -19,11 +20,12 @@ def handle_message(session: Session, message: str) -> Reply:
     session.history.append({"role": "user", "content": message})
     session.turns += 1
     with conversation(session.session_id, session.customer_id), \
-            trace_step("turn", input__value=message, turn=session.turns) as span:
+            trace_step("turn", input__value=message, turn=session.turns,
+                       recent_conversation=recent_conversation(session)) as span:
         reply = _route(session, message)
         set_attributes(span, output__value=reply.text, intent=reply.intent.value if reply.intent else "none",
                        needs_human=reply.needs_human, needs_review=reply.needs_review,
-                       order_id=session.order_id, item_id=session.item_id)
+                       order_id=session.order_id, item_id=session.item_id, facts=item_facts(session))
     if not reply.needs_review:
         session.history.append({"role": "assistant", "content": reply.text})
     return reply
