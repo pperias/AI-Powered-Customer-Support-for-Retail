@@ -3,6 +3,7 @@ from datetime import date
 from pathlib import Path
 
 from ..handoff import summary
+from ..observability import set_attributes, trace_step
 from ..session import Session
 from ..tools import orders
 from ..tools.warranty import is_in_warranty
@@ -29,7 +30,10 @@ def hand_off(session: Session, today: date | None = None) -> Reply:
     if item is None:
         return Reply("I couldn't confirm this item, so I'm connecting you to our support team.", needs_human=True,
                      handoff_summary=summary(session, "defective, item not found"))
-    if is_in_warranty(item["order_date"], today):
+    with trace_step("warranty_check", kind="TOOL", input__value=item["order_date"]) as span:
+        in_warranty = is_in_warranty(item["order_date"], today)
+        set_attributes(span, output__value=in_warranty)
+    if in_warranty:
         return Reply(
             f"Thanks for trying those steps. Your {item['name']} looks defective and is still under warranty "
             "(ordered within the last 12 months). I'm handing you to our returns team to arrange a replacement or return.",

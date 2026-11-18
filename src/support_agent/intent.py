@@ -65,7 +65,14 @@ def classify_keywords(session: Session, message: str) -> IntentResult:
         return IntentResult(Intent.TROUBLESHOOTING, step_result=step, unhappy=unhappy)
     if _has(text, REFUND_PHRASES):
         return IntentResult(Intent.REFUND_STATUS, unhappy=unhappy)
+    if in_troubleshooting and not _is_question(text):  # an answer to the last step ("the light is off")
+        return IntentResult(Intent.TROUBLESHOOTING, step_result="not_fixed", unhappy=unhappy)
     return IntentResult(Intent.PRODUCT_INFO, unhappy=unhappy)
+
+
+def _is_question(text: str) -> bool:
+    return text.rstrip().endswith("?") or bool(
+        re.match(r"(what|where|how|which|does|do|is|are|can|will|why|when)\b", text.strip()))
 
 
 def _context(session: Session) -> str:

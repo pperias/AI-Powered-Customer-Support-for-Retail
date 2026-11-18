@@ -1,10 +1,12 @@
 from dataclasses import dataclass, field
+from uuid import uuid4
 
 
 @dataclass
 class Session:
     """Working memory for one conversation (Version 1 has no memory across sessions)."""
 
+    session_id: str = field(default_factory=lambda: uuid4().hex[:12])  # groups the turns of one chat in Arize
     customer_id: str | None = None  # set by the chat UI after login; only this customer's orders are visible
     order_id: str | None = None
     item_id: str | None = None

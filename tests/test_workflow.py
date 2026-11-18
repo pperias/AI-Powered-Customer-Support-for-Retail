@@ -135,3 +135,11 @@ def test_message_with_no_words_does_not_call_the_gate():
 def test_order_ids_and_filler_only_get_a_greeting():
     reply = handle_message(Session(customer_id="C100"), "A1003 or maybe A1002")
     assert "found your Wireless Headphones X" in reply.text
+
+
+def test_tracing_is_a_no_op_without_setup():
+    from support_agent.observability import set_attributes, trace_step
+
+    with trace_step("anything", kind="TOOL", input__value="x") as span:
+        set_attributes(span, output__value="y")
+    assert span is None

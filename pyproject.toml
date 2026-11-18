@@ -11,6 +11,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest"]
 ui = ["gradio"]
+tracing = ["arize-otel", "openinference-instrumentation-openai"]
+evals = ["pydantic-evals"]
 
 [build-system]
 requires = ["setuptools>=61"]

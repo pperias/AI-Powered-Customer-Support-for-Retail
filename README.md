@@ -28,9 +28,11 @@ Because a conversation can move from product questions to troubleshooting ("I pl
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev,ui]"
-cp .env.example .env        # then add your OPENAI_API_KEY; never commit .env
+pip install -e ".[dev,ui,tracing,evals]"
+cp .env.example .env        # then add your OPENAI_API_KEY (and Arize keys for tracing); never commit .env
 ```
+
+With `ARIZE_API_KEY` and `ARIZE_SPACE_ID` set, every chat is traced to the Arize project `retail-support-v1`: one trace per customer message, grouped by conversation in the Sessions view, with the intent gate, tool calls and LLM calls inside.
 
 If your shell already has an old `OPENAI_API_KEY` exported, run `unset OPENAI_API_KEY` so the key in `.env` is used.
 
@@ -146,8 +148,12 @@ To share the running app with a teammate, see `docs/sharing-the-demo.md`.
 ## Tests and evals
 
 ```bash
-python -m pytest            # unit tests (offline: they never call the LLM)
-python evals/run_evals.py   # starter intent eval (uses the LLM when OPENAI_API_KEY is set)
+python -m pytest                              # unit tests (offline, never call the LLM)
+python evals/run_evals.py --offline           # 17 labeled conversations, keyword intent gate, free
+python evals/run_evals.py                     # all 20 conversations with the LLM, plus the LLM judge
+python evals/run_evals.py --calibrate-judge   # does the LLM judge agree with human labels?
 ```
+
+See `evals/README.md` for what the evals check and how to add a case.
 
 Read `CONTRIBUTING.md` before your first pull request.
