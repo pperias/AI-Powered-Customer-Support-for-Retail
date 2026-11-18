@@ -10,7 +10,7 @@ The evals run labeled conversations through the real agent (`handle_message`) an
 
 ## Online evals in Arize
 
-The same idea runs on live traces in Arize with a rules-based judge (`ONLINE_JUDGE_PROMPT`), calibrated on `data/online_judge_calibration.csv`. Setup steps are in `docs/arize-online-evals.md`.
+The same idea runs on live traces in Arize with a rules-based judge (`ONLINE_JUDGE_PROMPT`), calibrated on `data/online_judge_calibration.csv`. Its 15 labels were proposed by Claude at Priya's request (2026-11-17) to get the Arize setup running; the team should relabel them and recalibrate. Setup steps are in `docs/arize-online-evals.md`.
 
 ## Run
 

@@ -2,37 +2,37 @@ facts,recent_conversation,input,output,human_label
 "Item: 55-inch OLED TV. Ordered 2026-06-15 (in warranty, 12-month warranty).","Customer: A1001
 Assistant: I found your order. Which item is this about? (1. 55-inch OLED TV, 2. Soundbar 200)
 Customer: 1
-Assistant: Thanks, I found your 55-inch OLED TV. How can I help?",my TV won't turn on,"Sorry to hear that. Step 1: Unplug the TV from the wall for 60 seconds, then plug it straight into a wall outlet and press the power button on the TV itself. Did that fix it?",
+Assistant: Thanks, I found your 55-inch OLED TV. How can I help?",my TV won't turn on,"Sorry to hear that. Step 1: Unplug the TV from the wall for 60 seconds, then plug it straight into a wall outlet and press the power button on the TV itself. Did that fix it?",good
 "Item: 55-inch OLED TV. Ordered 2026-06-15 (in warranty, 12-month warranty).","Customer: A1001
 Assistant: I found your order. Which item is this about? (1. 55-inch OLED TV, 2. Soundbar 200)
 Customer: 1
-Assistant: Thanks, I found your 55-inch OLED TV. How can I help?",my TV won't turn on,Your TV is defective. I've arranged a replacement for you.,
+Assistant: Thanks, I found your 55-inch OLED TV. How can I help?",my TV won't turn on,Your TV is defective. I've arranged a replacement for you.,bad
 "Item: 55-inch OLED TV. Ordered 2026-06-15 (in warranty, 12-month warranty).","Customer: A1001
 Assistant: I found your order. Which item is this about? (1. 55-inch OLED TV, 2. Soundbar 200)
 Customer: 1
-Assistant: Thanks, I found your 55-inch OLED TV. How can I help?",my TV won't turn on,Step 1: Remove the back cover and check the power board for burnt components.,
+Assistant: Thanks, I found your 55-inch OLED TV. How can I help?",my TV won't turn on,Step 1: Remove the back cover and check the power board for burnt components.,bad
 "Item: 55-inch OLED TV. Ordered 2026-06-15 (in warranty, 12-month warranty).","Customer: A1001
 Assistant: I found your order. Which item is this about? (1. 55-inch OLED TV, 2. Soundbar 200)
 Customer: 1
-Assistant: Thanks, I found your 55-inch OLED TV. How can I help?",my TV won't turn on,Have you tried turning it off and on?,
+Assistant: Thanks, I found your 55-inch OLED TV. How can I help?",my TV won't turn on,Have you tried turning it off and on?,partial
 "Item: 55-inch OLED TV. Ordered 2026-06-15 (in warranty, 12-month warranty). Troubleshooting steps given so far: 1.","Customer: A1001
 Assistant: I found your order. Which item is this about? (1. 55-inch OLED TV, 2. Soundbar 200)
 Customer: 1
 Assistant: Thanks, I found your 55-inch OLED TV. How can I help?
 Customer: my TV won't turn on
-Assistant: Step 1: Unplug the TV from the wall for 60 seconds, then plug it straight into a wall outlet and press the power button on the TV itself. Did that fix it?",still nothing,"Thanks. Step 2: Check that the power cable is pushed fully into the back of the TV, and try a different wall outlet that you know works. Did that fix it?",
+Assistant: Step 1: Unplug the TV from the wall for 60 seconds, then plug it straight into a wall outlet and press the power button on the TV itself. Did that fix it?",still nothing,"Thanks. Step 2: Check that the power cable is pushed fully into the back of the TV, and try a different wall outlet that you know works. Did that fix it?",good
 "Item: 55-inch OLED TV. Ordered 2026-06-15 (in warranty, 12-month warranty). Troubleshooting steps given so far: 1.","Customer: A1001
 Assistant: I found your order. Which item is this about? (1. 55-inch OLED TV, 2. Soundbar 200)
 Customer: 1
 Assistant: Thanks, I found your 55-inch OLED TV. How can I help?
 Customer: my TV won't turn on
-Assistant: Step 1: Unplug the TV from the wall for 60 seconds, then plug it straight into a wall outlet and press the power button on the TV itself. Did that fix it?",still nothing,"Step 2: Unplug the TV from the wall for 60 seconds, then plug it back in and press the power button.",
+Assistant: Step 1: Unplug the TV from the wall for 60 seconds, then plug it straight into a wall outlet and press the power button on the TV itself. Did that fix it?",still nothing,"Step 2: Unplug the TV from the wall for 60 seconds, then plug it back in and press the power button.",partial
 "Item: 55-inch OLED TV. Ordered 2026-06-15 (in warranty, 12-month warranty). Troubleshooting steps given so far: 1.","Customer: A1001
 Assistant: I found your order. Which item is this about? (1. 55-inch OLED TV, 2. Soundbar 200)
 Customer: 1
 Assistant: Thanks, I found your 55-inch OLED TV. How can I help?
 Customer: my TV won't turn on
-Assistant: Step 1: Unplug the TV from the wall for 60 seconds, then plug it straight into a wall outlet and press the power button on the TV itself. Did that fix it?",still nothing,Step 2: Check that your HDMI cable is connected to the right input.,
+Assistant: Step 1: Unplug the TV from the wall for 60 seconds, then plug it straight into a wall outlet and press the power button on the TV itself. Did that fix it?",still nothing,Step 2: Check that your HDMI cable is connected to the right input.,bad
 "Item: 55-inch OLED TV. Ordered 2026-06-15 (in warranty, 12-month warranty). Troubleshooting steps given so far: 3.","Customer: A1001
 Assistant: I found your order. Which item is this about? (1. 55-inch OLED TV, 2. Soundbar 200)
 Customer: 1
@@ -42,7 +42,7 @@ Assistant: Step 1: Unplug the TV from the wall for 60 seconds, then plug it stra
 Customer: still nothing
 Assistant: Step 2: Check that the power cable is pushed fully into the back of the TV, and try a different wall outlet.
 Customer: still not working
-Assistant: Step 3: Look at the standby light and hold the power button on the TV for 10 seconds.","the light is off, nothing happens",Thanks for trying those steps. Your 55-inch OLED TV looks defective and is still under warranty. I'm handing you to our returns team to arrange a replacement or return.,
+Assistant: Step 3: Look at the standby light and hold the power button on the TV for 10 seconds.","the light is off, nothing happens",Thanks for trying those steps. Your 55-inch OLED TV looks defective and is still under warranty. I'm handing you to our returns team to arrange a replacement or return.,good
 "Item: 55-inch OLED TV. Ordered 2026-06-15 (in warranty, 12-month warranty). Troubleshooting steps given so far: 3.","Customer: A1001
 Assistant: I found your order. Which item is this about? (1. 55-inch OLED TV, 2. Soundbar 200)
 Customer: 1
@@ -52,7 +52,7 @@ Assistant: Step 1: Unplug the TV from the wall for 60 seconds, then plug it stra
 Customer: still nothing
 Assistant: Step 2: Check that the power cable is pushed fully into the back of the TV, and try a different wall outlet.
 Customer: still not working
-Assistant: Step 3: Look at the standby light and hold the power button on the TV for 10 seconds.","the light is off, nothing happens",Step 4: Try unplugging it one more time.,
+Assistant: Step 3: Look at the standby light and hold the power button on the TV for 10 seconds.","the light is off, nothing happens",Step 4: Try unplugging it one more time.,partial
 "Item: Soundbar 200. Ordered 2025-09-01 (out of warranty, 12-month warranty). Troubleshooting steps given so far: 3.","Customer: A1001
 Assistant: I found your order. Which item is this about? (1. 55-inch OLED TV, 2. Soundbar 200)
 Customer: soundbar
@@ -62,7 +62,7 @@ Assistant: Step 1: Unplug the soundbar for 30 seconds and plug it back in.
 Customer: still no sound
 Assistant: Step 2: Check the input matches your cable (HDMI ARC, optical or Bluetooth).
 Customer: still no sound
-Assistant: Step 3: Reset the soundbar by holding power and volume-down for 5 seconds.",still no sound,"Thanks for trying those steps. Your Soundbar 200 looks defective, but it was ordered more than 12 months ago, so it is outside the warranty. I'm connecting you to a support agent to discuss your options.",
+Assistant: Step 3: Reset the soundbar by holding power and volume-down for 5 seconds.",still no sound,"Thanks for trying those steps. Your Soundbar 200 looks defective, but it was ordered more than 12 months ago, so it is outside the warranty. I'm connecting you to a support agent to discuss your options.",good
 "Item: Soundbar 200. Ordered 2025-09-01 (out of warranty, 12-month warranty). Troubleshooting steps given so far: 3.","Customer: A1001
 Assistant: I found your order. Which item is this about? (1. 55-inch OLED TV, 2. Soundbar 200)
 Customer: soundbar
@@ -72,14 +72,14 @@ Assistant: Step 1: Unplug the soundbar for 30 seconds and plug it back in.
 Customer: still no sound
 Assistant: Step 2: Check the input matches your cable (HDMI ARC, optical or Bluetooth).
 Customer: still no sound
-Assistant: Step 3: Reset the soundbar by holding power and volume-down for 5 seconds.",still no sound,"Your soundbar is defective and under warranty, so I'm starting a free return for you now.",
+Assistant: Step 3: Reset the soundbar by holding power and volume-down for 5 seconds.",still no sound,"Your soundbar is defective and under warranty, so I'm starting a free return for you now.",bad
 "Item: Soundbar 200. Ordered 2025-09-01 (out of warranty, 12-month warranty).","Customer: A1001
 Assistant: I found your order. Which item is this about? (1. 55-inch OLED TV, 2. Soundbar 200)
 Customer: soundbar
-Assistant: Thanks, I found your Soundbar 200. How can I help?",no sound,"Step 1: Check that the soundbar's input matches the cable you are using (HDMI ARC, optical or Bluetooth), and that the TV's audio output is set to the soundbar.",
+Assistant: Thanks, I found your Soundbar 200. How can I help?",no sound,"Step 1: Check that the soundbar's input matches the cable you are using (HDMI ARC, optical or Bluetooth), and that the TV's audio output is set to the soundbar.",good
 "Item: Wireless Headphones X. Ordered 2026-03-02 (in warranty, 12-month warranty).","Customer: A1002
-Assistant: Thanks, I found your Wireless Headphones X. How can I help?",my headphones won't pair,"Step 1: Charge the headphones for at least 15 minutes, then turn them on. Did that help?",
+Assistant: Thanks, I found your Wireless Headphones X. How can I help?",my headphones won't pair,"Step 1: Charge the headphones for at least 15 minutes, then turn them on. Did that help?",good
 "Item: Wireless Headphones X. Ordered 2026-03-02 (in warranty, 12-month warranty).","Customer: A1002
-Assistant: Thanks, I found your Wireless Headphones X. How can I help?",my headphones won't pair,"Step 1: Check every cable and the power source, and try a different outlet.",
+Assistant: Thanks, I found your Wireless Headphones X. How can I help?",my headphones won't pair,"Step 1: Check every cable and the power source, and try a different outlet.",bad
 "Item: Wireless Headphones X. Ordered 2026-03-02 (in warranty, 12-month warranty).","Customer: A1002
-Assistant: Thanks, I found your Wireless Headphones X. How can I help?",my headphones won't pair,"Step 1: Hold the power button for 7 seconds until the light flashes, then select Wireless Headphones X in your phone's Bluetooth list.",
+Assistant: Thanks, I found your Wireless Headphones X. How can I help?",my headphones won't pair,"Step 1: Hold the power button for 7 seconds until the light flashes, then select Wireless Headphones X in your phone's Bluetooth list.",good
