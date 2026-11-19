@@ -10,6 +10,11 @@
     "Check that the input on the soundbar matches the cable you are using (HDMI ARC, optical or Bluetooth).",
     "Reset the soundbar by holding the power and volume-down buttons together for 5 seconds."
   ],
+  "headphones-x": [
+    "Charge the headphones for at least 15 minutes, then turn them on.",
+    "Turn Bluetooth on for your phone or computer, and remove (forget) Wireless Headphones X from its Bluetooth list if it is already there.",
+    "Hold the power button on the headphones for 7 seconds until the light flashes blue and red (pairing mode), then select Wireless Headphones X on your device."
+  ],
   "default": [
     "Turn the product off, unplug it or remove the battery for 30 seconds, then turn it on again.",
     "Check every cable and the power source, and try a different outlet or charger.",

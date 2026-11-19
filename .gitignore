@@ -13,3 +13,6 @@ __pycache__/
 # OS and editor
 .DS_Store
 .vscode/
+
+# Eval results (upload to Arize instead of committing)
+evals/results/

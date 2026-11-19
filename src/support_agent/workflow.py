@@ -1,7 +1,8 @@
 from . import config, handoff
+from .facts import item_facts, recent_conversation
 from .branches import product_info, refund_status, troubleshooting
 from .intent import classify
-from .observability import trace_step
+from .observability import conversation, set_attributes, trace_step
 from .session import Session
 from .tools import orders
 from .types import Intent, Reply
@@ -18,7 +19,13 @@ def handle_message(session: Session, message: str) -> Reply:
     """
     session.history.append({"role": "user", "content": message})
     session.turns += 1
-    reply = _route(session, message)
+    with conversation(session.session_id, session.customer_id), \
+            trace_step("turn", input__value=message, turn=session.turns,
+                       recent_conversation=recent_conversation(session)) as span:
+        reply = _route(session, message)
+        set_attributes(span, output__value=reply.text, intent=reply.intent.value if reply.intent else "none",
+                       needs_human=reply.needs_human, needs_review=reply.needs_review,
+                       order_id=session.order_id, item_id=session.item_id, facts=item_facts(session))
     if not reply.needs_review:
         session.history.append({"role": "assistant", "content": reply.text})
     return reply
@@ -40,8 +47,10 @@ def _route(session: Session, message: str) -> Reply:
         return Reply("How can I help? You can ask about your product, a problem with it, or a refund.")
 
     # Intent gate first, so "I need a person" works even before an order ID is given.
-    with trace_step("intent_gate"):
+    with trace_step("intent_gate", input__value=message) as span:
         result = classify(session, message)
+        set_attributes(span, output__value=result.intent.value, confidence=result.confidence,
+                       unhappy=result.unhappy, step_result=result.step_result)
     if result.intent == Intent.ESCALATE:
         return handoff.to_human(session, "customer asked for a person")
     if result.unhappy:
@@ -49,8 +58,9 @@ def _route(session: Session, message: str) -> Reply:
                                 "I'm sorry this has been frustrating. I'm connecting you to a member of our support team.")
 
     # Pre-check (code): an order this customer owns. A new order ID in a later message switches orders.
-    with trace_step("order_precheck"):
+    with trace_step("order_lookup", kind="TOOL", input__value=message) as span:
         order_id = orders.find_order_id(message, session.customer_id)
+        set_attributes(span, output__value=order_id or "not found")
     just_found_order = bool(order_id and order_id != session.order_id)
     if just_found_order:
         session.order_id, session.item_id, session.product_id, session.item_name = order_id, None, None, None
