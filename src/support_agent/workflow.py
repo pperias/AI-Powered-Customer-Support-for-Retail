@@ -71,9 +71,12 @@ def _route(session: Session, message: str) -> Reply:
                          "in your confirmation email.")
         return Reply("Please share your order ID so I can look up your purchase.")
 
-    # Item selection: every message, so "actually my soundbar..." switches item.
+    # Item selection: every message, so "actually my soundbar..." switches item. Once an item is chosen,
+    # the LLM decides whether a mention is a switch ("where do I plug in a soundbar?" about the TV is not).
     order = orders.get_order(session.order_id, session.customer_id)
     item = orders.select_item(order, message)
+    if session.item_id is not None and result.from_llm:
+        item = orders.item_by_name(order, result.help_with)
     just_selected = item is not None and item["item_id"] != session.item_id
     if just_selected:
         session.item_id, session.product_id, session.item_name = item["item_id"], item["product_id"], item["name"]

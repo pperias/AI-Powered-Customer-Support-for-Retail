@@ -110,6 +110,21 @@ CASES = [
          {"message": "where do I plug in a soundbar?", "intent": "product_info", "item_id": "A1001-1",
           "contains": ["earc"]},
      ]},
+    {"name": "tv-question-mentions-soundbar", "category": "product_info", "needs_llm": True, "customer": "C100",
+     "turns": [
+         {"message": "A1001"},
+         {"message": "1"},
+         {"message": "which input should I use to send the TV audio to a soundbar?", "intent": "product_info",
+          "item_id": "A1001-1"},
+     ]},
+    {"name": "switch-to-soundbar-question", "category": "routing", "needs_llm": True, "customer": "C100",
+     "turns": [
+         {"message": "A1001"},
+         {"message": "tv"},
+         {"message": "what is the resolution?", "item_id": "A1001-1"},
+         {"message": "ok what about the soundbar, does it have bluetooth?", "item_id": "A1001-2",
+          "contains": ["bluetooth"]},
+     ]},
     {"name": "soundbar-bluetooth", "category": "product_info", "needs_llm": True, "customer": "C100",
      "turns": [
          {"message": "A1001"},
