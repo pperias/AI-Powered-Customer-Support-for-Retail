@@ -6,6 +6,7 @@ Run from the project root:
     python evals/run_evals.py --calibrate-judge    # LLM judge vs human labels on data/troubleshooting_reference.csv
     python evals/run_evals.py --calibrate-judge --online   # the Arize online judge vs data/online_judge_calibration.csv
     python evals/run_evals.py --case manager-claim # one case by name
+    python evals/run_evals.py --repeat 3           # run every conversation 3 times to find flaky cases
 
 Each conversation runs through the real workflow (handle_message). With Arize keys set, every run is
 traced to the "retail-support-evals" project, and the results CSVs in evals/results/ can be uploaded
@@ -13,7 +14,9 @@ to Arize as datasets.
 """
 import argparse
 import csv
+import json
 import os
+import time
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -26,6 +29,7 @@ sys.path.insert(0, str(ROOT / "evals"))
 from pydantic_evals import Case, Dataset  # noqa: E402
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext  # noqa: E402
 
+import metrics  # noqa: E402
 from cases import CASES  # noqa: E402
 
 RESULTS_DIR = ROOT / "evals" / "results"
@@ -42,9 +46,12 @@ def run_conversation(case: dict) -> dict:
     from support_agent.workflow import handle_message, send_reviewed
 
     session = Session(customer_id=case["customer"])
-    turns = []
+    turns, turn_seconds = [], []
+    metrics.start()
     for turn in case["turns"]:
+        started = time.perf_counter()
         reply = handle_message(session, turn["message"])
+        turn_seconds.append(time.perf_counter() - started)
         if reply.needs_review:  # the eval plays the reviewer and approves the draft unchanged
             send_reviewed(session, reply, reply.text)
         turns.append({
@@ -56,7 +63,8 @@ def run_conversation(case: dict) -> dict:
             "item_id": session.item_id,
             "handoff": reply.handoff_summary or "",
         })
-    return {"session_id": session.session_id, "turns": turns, "facts": item_facts(session)}
+    usage = metrics.conversation_metrics(metrics.stop(), turn_seconds)
+    return {"session_id": session.session_id, "turns": turns, "facts": item_facts(session), "metrics": usage}
 
 
 def check_turn(expect: dict, got: dict) -> list[str]:
@@ -69,6 +77,8 @@ def check_turn(expect: dict, got: dict) -> list[str]:
         failures.append(f"intent {got['intent']}, expected one of {expect['intent_in']}")
     failures += [f"missing {s!r}" for s in expect.get("contains", []) if s.lower() not in text]
     failures += [f"should not say {s!r}" for s in expect.get("not_contains", []) if s.lower() in text]
+    if "contains_any" in expect and not any(s.lower() in text for s in expect["contains_any"]):
+        failures.append(f"missing one of {expect['contains_any']}")
     for flag in ("needs_human", "needs_review"):
         if flag in expect and got[flag] != expect[flag]:
             failures.append(f"{flag}={got[flag]}, expected {expect[flag]}")
@@ -118,52 +128,95 @@ class TroubleshootingJudge(Evaluator):
 
 # --- Runs -----------------------------------------------------------------------------------------
 
-def run_conversations(offline: bool, only: str | None, verbose: bool) -> bool:
+def run_conversations(offline: bool, only: str | None, verbose: bool, repeat: int = 1) -> bool:
     selected = [c for c in CASES if (not only or c["name"] == only) and not (offline and c.get("needs_llm"))]
     dataset = Dataset(
         name="retail-support-v1",
         cases=[Case(name=c["name"], inputs=c, metadata={"category": c["category"]}) for c in selected],
         evaluators=[TurnChecks(), TroubleshootingJudge()],
     )
-    report = dataset.evaluate_sync(run_conversation, max_concurrency=4, progress=False)
+    metrics.install_hooks()
+    report = dataset.evaluate_sync(run_conversation, max_concurrency=4, progress=False, repeat=repeat)
     if verbose:
         report.print(include_reasons=True, include_durations=True, width=160)
 
-    by_category: dict[str, list[bool]] = {}
-    rows = []
+    rows, per_conversation = [], []
+    intent_checked = intent_correct = 0
     for case in report.cases:
         ok = case.assertions["all_turns_pass"].value
-        by_category.setdefault(case.metadata["category"], []).append(ok)
         judge = case.labels.get("judge")
+        per_conversation.append(case.output["metrics"])
+        for expect, got in zip(case.inputs["turns"], case.output["turns"]):
+            if "intent" in expect or "intent_in" in expect:
+                intent_checked += 1
+                intent_correct += got["intent"] == expect.get("intent") or got["intent"] in expect.get("intent_in", [])
         rows.append({
-            "case": case.name, "category": case.metadata["category"], "pass": ok,
-            "failures": case.assertions["all_turns_pass"].reason, "judge": judge.value if judge else "",
+            "case": getattr(case, "source_case_name", None) or case.name, "category": case.metadata["category"],
+            "pass": ok, "failures": case.assertions["all_turns_pass"].reason, "judge": judge.value if judge else "",
             "judge_explanation": judge.reason if judge else "", "session_id": case.output["session_id"],
+            "turn_seconds": " ".join(f"{t:.2f}" for t in case.output["metrics"]["turn_seconds"]),
+            "cost_usd": round(case.output["metrics"]["cost_usd"], 6),
             "transcript": "\n".join(f"you> {t['message']}\nbot> {t['text']}" for t in case.output["turns"]),
         })
     for case in report.failures:
-        rows.append({"case": case.name, "category": case.metadata["category"], "pass": False,
-                     "failures": f"error: {case.error_message}"})
-        by_category.setdefault(case.metadata["category"], []).append(False)
+        rows.append({"case": getattr(case, "source_case_name", None) or case.name,
+                     "category": case.metadata["category"], "pass": False, "failures": f"error: {case.error_message}"})
 
-    print("\nConversations")
+    # One line per case: passes across repeats, so flaky cases stand out
+    by_case: dict[str, list[dict]] = {}
     for r in rows:
-        judge = f"  judge={r['judge']}" if r.get("judge") else ""
-        print(f"  {'PASS' if r['pass'] else 'FAIL'}  {r['category']:15} {r['case']}{judge}")
-        if not r["pass"]:
-            print(f"        {r['failures']}")
-        if r.get("judge") in ("partial", "bad"):
-            print(f"        judge: {r['judge_explanation']}")
+        by_case.setdefault(r["case"], []).append(r)
+    print(f"\nConversations ({repeat} run{'s' if repeat > 1 else ''} each)")
+    for name, runs in by_case.items():
+        passed = sum(r["pass"] for r in runs)
+        status = "PASS " if passed == len(runs) else ("FLAKY" if passed else "FAIL ")
+        judges = [r["judge"] for r in runs if r.get("judge")]
+        judge = f"  judge={','.join(judges)}" if judges else ""
+        print(f"  {status} {passed}/{len(runs)}  {runs[0]['category']:15} {name}{judge}")
+        for r in runs:
+            if not r["pass"]:
+                print(f"        {r['failures']}")
+                break
+        for r in runs:
+            if r.get("judge") in ("partial", "bad"):
+                print(f"        judge: {r['judge_explanation']}")
+                break
 
-    print("\nSummary by category")
-    for category, results in sorted(by_category.items()):
-        print(f"  {category:16} {sum(results)}/{len(results)} conversations pass")
+    by_category: dict[str, list[bool]] = {}
+    for r in rows:
+        by_category.setdefault(r["category"], []).append(r["pass"])
     labels = [r["judge"] for r in rows if r.get("judge")]
-    if labels:
-        print("  judge labels     " + ", ".join(f"{label}: {labels.count(label)}" for label in ("good", "partial", "bad")))
-    write_csv(f"conversations-{'offline' if offline else 'llm'}", rows)
+    quality = {
+        "conversation_pass_rate": round(sum(r["pass"] for r in rows) / len(rows), 3),
+        "conversation_passes": f"{sum(r['pass'] for r in rows)}/{len(rows)}",
+        "by_category": {c: f"{sum(v)}/{len(v)}" for c, v in sorted(by_category.items())},
+        "intent_accuracy": round(intent_correct / intent_checked, 3) if intent_checked else None,
+        "intent_turns_checked": intent_checked,
+        "flaky_cases": [n for n, runs in by_case.items() if 0 < sum(r["pass"] for r in runs) < len(runs)],
+        "failing_cases": [n for n, runs in by_case.items() if not any(r["pass"] for r in runs)],
+        "judge_labels": {label: labels.count(label) for label in ("good", "partial", "bad")},
+        "handoff_rate": round(sum(any(t["needs_human"] for t in c.output["turns"]) for c in report.cases)
+                              / max(len(report.cases), 1), 3),
+    }
+    performance = metrics.summarize(per_conversation)
 
-    gating_failed = [r["case"] for r in rows if r["category"] in GATING_CATEGORIES and not r["pass"]]
+    print("\nQuality")
+    for key, value in quality.items():
+        print(f"  {key:30} {value}")
+    print("\nSpeed and cost (app only; judge calls excluded)")
+    for key, value in performance.items():
+        print(f"  {key:30} {value}")
+
+    mode = "offline" if offline else "llm"
+    write_csv(f"conversations-{mode}", rows)
+    stamp = f"{datetime.now():%Y%m%d-%H%M%S}"
+    summary = {"run_at": stamp, "mode": mode, "repeat": repeat, "cases": len(by_case),
+               "quality": quality, "performance": performance}
+    RESULTS_DIR.mkdir(exist_ok=True)
+    (RESULTS_DIR / f"metrics-{mode}-{stamp}.json").write_text(json.dumps(summary, indent=2))
+    print(f"Metrics saved to evals/results/metrics-{mode}-{stamp}.json")
+
+    gating_failed = sorted({r["case"] for r in rows if r["category"] in GATING_CATEGORIES and not r["pass"]})
     if gating_failed:
         print(f"\nFAIL: safety or access cases failed: {', '.join(gating_failed)}")
     return not gating_failed
@@ -229,6 +282,7 @@ def main() -> None:
     parser.add_argument("--online", action="store_true", help="with --calibrate-judge: the Arize online judge")
     parser.add_argument("--case", help="run one conversation by name")
     parser.add_argument("--verbose", action="store_true", help="also print the full pydantic-evals report")
+    parser.add_argument("--repeat", type=int, default=1, help="run each conversation N times (finds flaky cases)")
     args = parser.parse_args()
 
     if args.offline:
@@ -237,7 +291,7 @@ def main() -> None:
         from support_agent.observability import setup_tracing
 
         setup_tracing(os.getenv("ARIZE_EVALS_PROJECT", "retail-support-evals"))
-    ok = calibrate_judge(args.online) if args.calibrate_judge else run_conversations(args.offline, args.case, args.verbose)
+    ok = calibrate_judge(args.online) if args.calibrate_judge else run_conversations(args.offline, args.case, args.verbose, args.repeat)
     sys.exit(0 if ok else 1)
 
 

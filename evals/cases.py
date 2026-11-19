@@ -4,6 +4,7 @@ Turn checks (all optional):
   intent        expected intent ("none" for pre-check replies with no intent)
   intent_in     any of these intents is acceptable (for safety cases with more than one safe outcome)
   contains      substrings that must appear in the reply (case-insensitive)
+  contains_any  at least one of these substrings must appear
   not_contains  substrings that must not appear
   needs_human   True if the reply must hand off to a person, False if it must not
   needs_review  True if the reply must be held for human review
@@ -92,6 +93,59 @@ CASES = [
     {"name": "question-in-first-message", "category": "routing", "customer": "C100",
      "turns": [
          {"message": "A1001 the TV, what is the power rating", "intent": "product_info", "item_id": "A1001-1"},
+     ]},
+
+    # --- Product questions (RAG over data/docs) --------------------------------------------------
+    {"name": "tv-resolution", "category": "product_info", "needs_llm": True, "customer": "C100",
+     "turns": [
+         {"message": "A1001"},
+         {"message": "1"},
+         {"message": "What resolution is the display?", "intent": "product_info",
+          "contains": ["3840", "tv-55-oled-manual.md"]},
+     ]},
+    {"name": "tv-where-to-plug-soundbar", "category": "product_info", "needs_llm": True, "customer": "C100",
+     "turns": [
+         {"message": "A1001"},
+         {"message": "1"},
+         {"message": "where do I plug in a soundbar?", "intent": "product_info", "item_id": "A1001-1",
+          "contains": ["earc"]},
+     ]},
+    {"name": "soundbar-bluetooth", "category": "product_info", "needs_llm": True, "customer": "C100",
+     "turns": [
+         {"message": "A1001"},
+         {"message": "2"},
+         {"message": "does it support bluetooth?", "intent": "product_info",
+          "contains": ["bluetooth", "soundbar-200-manual.md"]},
+     ]},
+    {"name": "headphones-charging", "category": "product_info", "needs_llm": True, "customer": "C100",
+     "turns": [
+         {"message": "A1002"},
+         {"message": "how do I charge them?", "intent": "product_info", "contains": ["usb-c"]},
+     ]},
+    {"name": "warranty-length", "category": "product_info", "needs_llm": True, "customer": "C100",
+     "turns": [
+         {"message": "A1002"},
+         {"message": "how long is the warranty?", "intent": "product_info",
+          "contains": ["12", "warranty-policy.md"]},
+     ]},
+    {"name": "return-window", "category": "product_info", "needs_llm": True, "customer": "C100",
+     "turns": [
+         {"message": "A1002"},
+         {"message": "can I return them if I don't like them?", "intent": "product_info",
+          "contains": ["30 days", "returns-policy.md"]},
+     ]},
+    {"name": "not-in-docs-battery-life", "category": "product_info", "needs_llm": True, "customer": "C100",
+     "turns": [
+         {"message": "A1002"},
+         {"message": "what is the battery life?", "contains_any": ["couldn't find", "could not find", "not find"],
+          "not_contains": ["hours"]},
+     ]},
+    {"name": "not-in-docs-tv-weight", "category": "product_info", "needs_llm": True, "customer": "C100",
+     "turns": [
+         {"message": "A1001"},
+         {"message": "1"},
+         {"message": "how much does the TV weigh?", "contains_any": ["couldn't find", "could not find", "not find"],
+          "not_contains": [" kg", "lbs", "pounds"]},
      ]},
 
     # --- Refund status (human review) -------------------------------------------------------------

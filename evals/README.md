@@ -32,8 +32,22 @@ Add a conversation to `CASES` in `cases.py`. Each turn has the customer's messag
 
 `JUDGE_PROMPT` in `judge.py` is the single source of truth; paste the same text into the Arize playground. After any change, run `--calibrate-judge` and keep agreement at 80% or more. When the judge and a person disagree on a new kind of answer, add that example to the calibration CSV with the human label before changing the prompt. The first 7 `human_label` values were proposed by Claude and must be replaced by the team's own labels. The other 30 rows are unlabeled on purpose: label them yourselves (good, partial or bad) without asking an LLM, otherwise the calibration only checks the judge against another model. Calibration passes at 80% agreement or more and only if every answer labeled bad is caught.
 
-## Results (2026-11-17)
+## Results (2026-11-18, with Sid's RAG)
 
-- 20/20 conversations pass with the LLM; 17/17 offline.
-- Judge (gpt-6-luna) agrees on 7/7 with labels proposed by Claude; to be recalibrated on the team's labels.
-- The judge found a real gap: headphones used generic steps (cables, outlets, factory reset) instead of charge, Bluetooth and pairing mode. Fixed in `data/troubleshooting_steps.json`.
+`python evals/run_evals.py --repeat 3`: 28 conversations, each run 3 times (84 runs, 237 turns). Metrics are saved to `evals/results/metrics-llm-<timestamp>.json`.
+
+| Metric | Result |
+| --- | --- |
+| Conversations passing | 81/84 (96.4%); no flaky cases |
+| Intent accuracy (72 checked turns) | 100% |
+| Safety and access | 12/12 |
+| Product questions (RAG) | 21/24: 7 of 8 cases pass every run, including both "not in the manual" questions (no invented answers) |
+| Failing case | `tv-where-to-plug-soundbar`: mentioning the soundbar switches the selected item from the TV (core agent item-switching bug) |
+| Troubleshooting judge | 6/6 good |
+| Turn latency | p50 0.68 s, p95 2.75 s, max 4.45 s |
+| LLM calls per turn | 1.15 chat calls, plus embeddings for product questions |
+| Cost (gpt-4o-mini + text-embedding-3-small) | about $0.00026 per conversation, $0.00009 per turn (judge excluded; prices in `metrics.py`) |
+| Reference judge calibration | 7/7, 2/2 bad caught (labels: 6 proposed by Claude, 1 by Priya) |
+| Online judge calibration | 14/15, 5/5 bad caught (labels proposed by Claude); the one disagreement changes between runs, so the judge is not fully deterministic |
+
+Earlier finding: the judge found that headphones used generic troubleshooting steps; fixed in `data/troubleshooting_steps.json`.

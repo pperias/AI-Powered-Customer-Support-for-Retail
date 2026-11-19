@@ -150,7 +150,8 @@ To share the running app with a teammate, see `docs/sharing-the-demo.md`.
 ```bash
 python -m pytest                              # unit tests (offline, never call the LLM)
 python evals/run_evals.py --offline           # 17 labeled conversations, keyword intent gate, free
-python evals/run_evals.py                     # all 20 conversations with the LLM, plus the LLM judge
+python evals/run_evals.py                     # all 28 conversations with the LLM, the LLM judge, and speed/cost metrics
+python evals/run_evals.py --repeat 3          # run each conversation 3 times to find flaky cases
 python evals/run_evals.py --calibrate-judge   # does the LLM judge agree with human labels?
 ```
 
