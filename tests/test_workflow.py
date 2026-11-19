@@ -143,3 +143,12 @@ def test_tracing_is_a_no_op_without_setup():
     with trace_step("anything", kind="TOOL", input__value="x") as span:
         set_attributes(span, output__value="y")
     assert span is None
+
+
+def test_item_by_name_matches_loosely():
+    from support_agent.tools import orders
+
+    order = orders.get_order("A1001")
+    assert orders.item_by_name(order, "soundbar 200")["item_id"] == "A1001-2"
+    assert orders.item_by_name(order, None) is None
+    assert orders.item_by_name(order, "toaster") is None

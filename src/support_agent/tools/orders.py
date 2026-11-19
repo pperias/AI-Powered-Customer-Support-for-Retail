@@ -51,6 +51,14 @@ def select_item(order: dict, text: str) -> dict | None:
     return matches[0] if len(matches) == 1 else None
 
 
+def item_by_name(order: dict, name: str | None) -> dict | None:
+    """The item the intent gate named, matched loosely ("soundbar 200" or "Soundbar 200")."""
+    if not name:
+        return None
+    lowered = name.lower().strip()
+    return next((i for i in order["items"] if i["name"].lower() == lowered or lowered in i["name"].lower()), None)
+
+
 def item_words(order: dict) -> set[str]:
     """Every word that only identifies an order or item, used to spot messages with no actual question."""
     words = {order["order_id"].lower()}
