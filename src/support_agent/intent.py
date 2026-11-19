@@ -10,7 +10,8 @@ INTENT_PROMPT = """You are the intent gate for a retail customer-support chat. C
 customer's latest message, using the conversation so far for context.
 
 Intents:
-- product_info: questions about the product (specs, features, ports, setup, power rating, compatibility).
+- product_info: questions about the product (specs, features, ports, setup, power rating, compatibility) \
+or about the store's warranty and return policies.
 - troubleshooting: the product is not working, or the customer is replying to a troubleshooting step \
 ("still no power", "that fixed it").
 - refund_status: the status of a return or refund for this order.
