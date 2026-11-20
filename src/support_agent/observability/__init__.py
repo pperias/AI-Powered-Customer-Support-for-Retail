@@ -1,3 +1,3 @@
-from .tracing import conversation, set_attributes, setup_tracing, trace_step
+from .tracing import conversation, flush, set_attributes, setup_tracing, trace_step
 
-__all__ = ["conversation", "set_attributes", "setup_tracing", "trace_step"]
+__all__ = ["conversation", "flush", "set_attributes", "setup_tracing", "trace_step"]

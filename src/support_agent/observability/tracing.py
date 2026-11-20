@@ -9,11 +9,12 @@ from contextlib import contextmanager, nullcontext
 from .. import config  # noqa: F401  loads .env before the Arize keys are read
 
 _tracer = None
+_provider = None
 
 
 def setup_tracing(project_name: str | None = None) -> None:
     """Called once at startup. Install the packages with: pip install -e ".[tracing]"."""
-    global _tracer
+    global _tracer, _provider
     if _tracer is not None:
         return
     api_key, space_id = os.getenv("ARIZE_API_KEY"), os.getenv("ARIZE_SPACE_ID")
@@ -32,11 +33,20 @@ def setup_tracing(project_name: str | None = None) -> None:
         api_key=api_key,
         project_name=project_name or os.getenv("ARIZE_PROJECT_NAME", "retail-support-v1"),
         verbose=False,
+        # Not program-wide: FastAPI (under the Gradio UI) traces every web request when a global provider
+        # exists, which floods Arize with UNKNOWN "GET /gradio_api/..." spans. Our spans and the OpenAI
+        # calls get this provider explicitly instead.
+        set_global_tracer_provider=False,
         **({"endpoint": endpoint} if endpoint else {}),
     )
     OpenAIInstrumentor().instrument(tracer_provider=provider)
-    _tracer = provider.get_tracer("support_agent")
+    _provider, _tracer = provider, provider.get_tracer("support_agent")
     print(f"Arize tracing on: project {project_name or os.getenv('ARIZE_PROJECT_NAME', 'retail-support-v1')}")
+
+
+def flush(timeout_ms: int = 30000) -> bool:
+    """Send any buffered spans now (scripts that exit quickly call this)."""
+    return _provider.force_flush(timeout_ms) if _provider is not None else True
 
 
 def _value(value):
