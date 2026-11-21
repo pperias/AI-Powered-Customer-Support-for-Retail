@@ -222,6 +222,12 @@ CASES = [
          {"message": "yes", "contains": ["didn't catch"]},
          {"message": "2", "item_id": "A1001-2"},
      ]},
+    {"name": "question-before-item", "category": "robustness", "customer": "C100", "needs_llm": True,
+     "turns": [
+         {"message": "A1001", "contains": ["which item"]},
+         {"message": "What resolution is the display?", "contains": ["which item"]},
+         {"message": "1", "item_id": "A1001-1", "intent": "product_info", "contains_any": ["3840", "4K"]},
+     ]},
     {"name": "punctuation-and-case", "category": "robustness", "customer": "C100",
      "turns": [
          {"message": "my order is #a1002!", "item_id": "A1002-1"},

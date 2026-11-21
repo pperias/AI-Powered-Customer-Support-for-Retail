@@ -1,6 +1,7 @@
 from support_agent import config
 from support_agent.session import Session
-from support_agent.types import Intent
+from support_agent.branches import product_info
+from support_agent.types import Intent, Reply
 from support_agent.workflow import handle_message, send_reviewed
 
 
@@ -125,6 +126,17 @@ def test_unclear_item_answer_asks_differently():
     assert "didn't catch which item" in reply.text
     handle_message(session, "1")
     assert session.item_id == "A1001-1"
+
+
+def test_question_before_item_is_answered_after_item_chosen(monkeypatch):
+    seen = []
+    monkeypatch.setattr(product_info, "answer", lambda session, message: seen.append(message) or Reply("4K"))
+    session = new_session("A1001")
+    reply = handle_message(session, "what resolution is the display?")
+    assert "Which item is your question about" in reply.text
+    reply = handle_message(session, "1")
+    assert session.item_id == "A1001-1" and reply.text == "4K"
+    assert seen == ["what resolution is the display?"] and session.pending_question is None
 
 
 def test_message_with_no_words_does_not_call_the_gate():

@@ -2,7 +2,7 @@
 
 A chat support agent for a consumer retail company. It answers product questions, troubleshoots problems, checks warranty and looks up refund status, so human agents can focus on cases that need judgment.
 
-We build two versions and compare them. Version 1 is a workflow agent with read-only tools: code decides the steps, the LLM classifies each message and drafts answers, and a person reviews refund status replies. Returns are out of scope and handed to a separate flow. Version 2 is a higher-agency single agent that also handles returns.
+Version 1 (this repo) is a workflow agent with read-only tools: code decides the steps, the LLM classifies each message and drafts answers, and a person reviews refund status replies. Returns are out of scope and handed to a separate flow. A higher-agency version that also creates returns is designed but not built.
 
 Because a conversation can move from product questions to troubleshooting ("I plugged in the cable and there is no power"), the intent gate runs on every message. See `docs/architecture.md` for the flow and `docs/interfaces.md` for how the three areas connect.
 
@@ -11,14 +11,14 @@ Because a conversation can move from product questions to troubleshooting ("I pl
 | Area | Owner |
 | --- | --- |
 | Core agent: flow, intent gate, branches, tools | Priya |
-| RAG: product manuals and policies | to fill |
-| Observability (Arize) and evals | to fill |
+| RAG: product manuals and policies | Sid Sahgal |
+| Observability (Arize) and evals | Priya |
 
 ## Layout
 
 | Path | Purpose |
 | --- | --- |
-| `src/support_agent/` | The agent: `workflow.py`, `intent.py`, `branches/`, `tools/`, plus `rag/` and `observability/` stubs |
+| `src/support_agent/` | The agent: `workflow.py`, `intent.py`, `branches/`, `tools/`, plus `rag/` (retrieval) and `observability/` (Arize tracing) |
 | `data/` | Mock orders and `docs/` for manuals and policies |
 | `evals/` | Labeled conversations and eval scripts |
 | `tests/` | Unit tests |
@@ -44,7 +44,7 @@ Start the app and open http://localhost:8000 in your browser:
 python -m support_agent.ui
 ```
 
-The page has two sides. On the left is the **customer chat**, with a "Signed in as" dropdown for the mock customer. On the right is the **support agent console**: refund replies waiting for review, the handoff summary, and the agent's working memory.
+The page has two sides. On the left is the **customer chat**, with a "Signed in as" dropdown: Maya Thompson (customer C100) or Daniel Okafor (C200). On the right is the **support team console**: the review queue for refund replies, the handoff summary when the agent hands over, and the case details (status, order, item, steps given). Quick-message buttons under the chat fill in common demo messages.
 
 Pick the customer in "Signed in as", type the messages one at a time, and click **New chat** between scenarios.
 
@@ -97,7 +97,7 @@ After three steps the agent says the soundbar is outside the 12-month warranty a
 A1002 where is my refund?
 ```
 
-The customer sees "One moment, a member of our team is checking this for you." The draft reply appears in the console on the right. Edit it if you like, then click **Approve and send**, or click **Take over**.
+The customer sees "One moment, a member of our team is checking this for you." The draft reply appears in the console on the right. Edit it if you like, then click **Approve and send** (the button only appears while a reply is waiting).
 
 ### 5. Escalation (C100)
 
@@ -139,8 +139,8 @@ The agent switches to the soundbar and starts its troubleshooting steps.
 
 ### Known limits
 
-- **Product questions are not answered yet.** For "what are the specs?" the agent says it could not find the answer in the product documents, until the RAG part is connected.
-- **One request per message.** "My headphones won't charge and where is my refund" gets troubleshooting only. Combined requests are planned for Version 2.
+- **Product answers come only from the manuals and policies in `data/docs/`.** If the answer isn't there (battery life, TV weight), the agent says so instead of guessing.
+- **One request per message.** "My headphones won't charge and where is my refund" gets troubleshooting only. Combined requests would need a higher-agency agent.
 - **Troubleshooting steps are scripted per product, not per symptom** (`data/troubleshooting_steps.json`).
 
 To share the running app with a teammate, see `docs/sharing-the-demo.md`.
@@ -149,8 +149,8 @@ To share the running app with a teammate, see `docs/sharing-the-demo.md`.
 
 ```bash
 python -m pytest                              # unit tests (offline, never call the LLM)
-python evals/run_evals.py --offline           # 17 labeled conversations, keyword intent gate, free
-python evals/run_evals.py                     # all 28 conversations with the LLM, the LLM judge, and speed/cost metrics
+python evals/run_evals.py --offline           # 17 conversations that need no LLM, keyword intent gate, free
+python evals/run_evals.py                     # all 31 conversations with the LLM, the LLM judge, and speed/cost metrics
 python evals/run_evals.py --repeat 3          # run each conversation 3 times to find flaky cases
 python evals/run_evals.py --calibrate-judge   # does the LLM judge agree with human labels?
 ```

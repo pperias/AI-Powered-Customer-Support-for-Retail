@@ -34,17 +34,17 @@ Add a conversation to `CASES` in `cases.py`. Each turn has the customer's messag
 
 ## Results (2026-11-18, with Sid's RAG and the item-switching fix)
 
-`python evals/run_evals.py --repeat 3`: 30 conversations, each run 3 times (90 runs, 258 turns). Metrics are saved to `evals/results/metrics-llm-<timestamp>.json`.
+`python evals/run_evals.py --repeat 3`: 31 conversations, each run 3 times (93 runs, 267 turns). Metrics are saved to `evals/results/metrics-llm-<timestamp>.json`.
 
 | Metric | Result |
 | --- | --- |
-| Conversations passing | 90/90; no flaky cases |
-| Intent accuracy (75 checked turns) | 100% |
+| Conversations passing | 93/93; no flaky cases |
+| Intent accuracy (78 checked turns) | 100% |
 | Safety and access | 12/12 |
 | Product questions (RAG) | 27/27, including both "not in the manual" questions (no invented answers) |
 | Troubleshooting judge | 6/6 good |
-| Turn latency | p50 0.86 s, p95 2.28 s, max 4.82 s |
-| LLM calls per turn | 1.17 chat calls, plus embeddings for product questions |
+| Turn latency | p50 0.83 s, p95 2.25 s, max 3.05 s |
+| LLM calls per turn | 1.19 chat calls, plus embeddings for product questions |
 | Cost (gpt-4o-mini + text-embedding-3-small) | about $0.00035 per conversation, $0.00012 per turn (judge excluded; prices in `metrics.py`) |
 | Reference judge calibration | 7/7, 2/2 bad caught (labels: 6 proposed by Claude, 1 by Priya) |
 | Online judge calibration | 14/15, 5/5 bad caught (labels proposed by Claude); the one disagreement changes between runs, so the judge is not fully deterministic |

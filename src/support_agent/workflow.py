@@ -85,9 +85,16 @@ def _route(session: Session, message: str) -> Reply:
         names = ", ".join(f"{n}. {i['name']}" for n, i in enumerate(order["items"], 1))
         if just_found_order:
             return Reply(f"I found your order. Which item is this about? ({names})")
+        if len(orders.WORD_RE.findall(message)) >= 3:  # a real question, not "yes": keep it for later
+            session.pending_question = message
+            return Reply(f"Happy to help. Which item is your question about? ({names})")
         return Reply(f"Sorry, I didn't catch which item. Please reply with the number or the name: {names}")
     if just_selected and _only_identifiers(message, order):
+        if session.pending_question:  # "what resolution is the display?" then "1": answer the question now
+            pending, session.pending_question = session.pending_question, None
+            return _route(session, pending)
         return Reply(f"Thanks, I found your {session.item_name}. How can I help?")
+    session.pending_question = None
 
     if result.intent == Intent.OUT_OF_SCOPE:
         return Reply("I can help with product questions, troubleshooting and refund status for your order. "

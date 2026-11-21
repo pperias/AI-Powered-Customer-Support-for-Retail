@@ -16,6 +16,7 @@ class Session:
     steps_tried: list[str] = field(default_factory=list)  # troubleshooting steps already given
     history: list[dict] = field(default_factory=list)  # {"role": "user" | "assistant", "content": str}
     last_intent: str | None = None
+    pending_question: str | None = None  # asked before the item was chosen; answered once it is
     turns: int = 0
     unclear_turns: int = 0  # consecutive low-confidence messages
     handed_off: bool = False
